@@ -75,6 +75,7 @@ namespace まげつけ_obj変換ツール
         public static byte[] triListCount = new byte[12] { 0x74, 0x72, 0x69, 0x4C, 0x69, 0x73, 0x74, 0x43, 0x6F, 0x75, 0x6E, 0x74 };
         public static byte[] vertices = new byte[8] { 0x76, 0x65, 0x72, 0x74, 0x69, 0x63, 0x65, 0x73 };
         public static byte[] xgMaterial = new byte[13] { 0x01, 0x7D, 0x0A, 0x78, 0x67, 0x4D, 0x61, 0x74, 0x65, 0x72, 0x69, 0x61, 0x6C };
+        public static byte[] dag = new byte[8] { 0x01, 0x7D, 0x03, 0x64, 0x61, 0x67, 0x01, 0x7B };
         public static byte[] XGBv1 = new byte[8] { 0x58, 0x47, 0x42, 0x76, 0x31, 0x2E, 0x30, 0x30 };
         public static byte[] xgDagTransform = new byte[16] { 0x0E, 0x78, 0x67, 0x44, 0x61, 0x67, 0x54, 0x72, 0x61, 0x6E, 0x73, 0x66, 0x6F, 0x72, 0x6D, 0x02 };
         public static byte[] xgBgMatrix = new byte[14] { 0x01, 0x3B, 0x0A, 0x78, 0x67, 0x42, 0x67, 0x4D, 0x61, 0x74, 0x72, 0x69, 0x78, 0x0B };
@@ -107,7 +108,7 @@ namespace まげつけ_obj変換ツール
         public static byte[] rotation = new byte[45] { 0x08, 0x72, 0x6F, 0x74, 0x61, 0x74, 0x69, 0x6F, 0x6E, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 
                                                        0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0x3F, 0x05, 0x73, 0x63, 0x61, 0x6C, 0x65, 0x00, 0x00, 0x80, 0x3F, 0x00, 
                                                        0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x01, 0x7D };
-        public static byte[] dag = new byte[7] { 0x03, 0x64, 0x61, 0x67, 0x01, 0x7B, 0x02 };
+        public static byte[] dag_node = new byte[7] { 0x03, 0x64, 0x61, 0x67, 0x01, 0x7B, 0x02 };
         public static byte[] dagspace = new byte[5] { 0x01, 0x5B, 0x01, 0x5D, 0x02 };
         public static byte[] dagend = new byte[6] { 0x01, 0x5B, 0x01, 0x5D, 0x01, 0x7D };
 
@@ -337,6 +338,7 @@ namespace まげつけ_obj変換ツール
                 int p_read;
                 string p_st_number;
                 float p_number;
+                int removedec;
 
                 for (int m = 0; m < vnumbers.Length; m++)
                 {
@@ -346,13 +348,24 @@ namespace まげつけ_obj変換ツール
                         if (three == 0)
                             vnumbers[m] = vnumbers[m].Remove(0, 2);
 
+                        //小数点の位置を取得
+                        removedec = vnumbers[m].IndexOf(".");
+
                         //数値がマイナスかどうかを判定する
                         minus = vnumbers[m].Substring(0, 1);
                         if (minus == "-")
+                        {
                             p_read = 9;
+                            removedec -= 2;
+                            p_read += removedec;
+                        }
 
                         else
+                        {
                             p_read = 8;
+                            removedec -= 1;
+                            p_read += removedec;
+                        }
 
                         //座標を浮動小数点に変換する
                         p_st_number = vnumbers[m].Substring(0, p_read);
@@ -369,23 +382,11 @@ namespace まげつけ_obj変換ツール
                             pos_y.Add(p_number);
 
                         //座標情報を削除
-                        if (p_read == 9)
-                        {
-                            if (three == 2)
-                                vnumbers[m] = vnumbers[m].Remove(0, 9);
-
-                            else
-                                vnumbers[m] = vnumbers[m].Remove(0, 10);
-                        }
+                        if (three == 2)
+                            vnumbers[m] = vnumbers[m].Remove(0, p_read);
 
                         else
-                        {
-                            if (three == 2)
-                                vnumbers[m] = vnumbers[m].Remove(0, 8);
-
-                            else
-                                vnumbers[m] = vnumbers[m].Remove(0, 9);
-                        }
+                            vnumbers[m] = vnumbers[m].Remove(0, p_read + 1);
                     }
 
                     //3回繰り返し
@@ -399,13 +400,24 @@ namespace まげつけ_obj変換ツール
                         if (three == 0)
                             vtnumbers[m] = vtnumbers[m].Remove(0, 3);
 
+                        //小数点の位置を取得
+                        removedec = vtnumbers[m].IndexOf(".");
+
                         //数値がマイナスかどうかを判定する
                         minus = vtnumbers[m].Substring(0, 1);
                         if (minus == "-")
+                        {
                             p_read = 9;
+                            removedec -= 2;
+                            p_read += removedec;
+                        }
 
                         else
+                        {
                             p_read = 8;
+                            removedec -= 1;
+                            p_read += removedec;
+                        }
 
                         //座標を浮動小数点に変換する
                         p_st_number = vtnumbers[m].Substring(0, p_read);
@@ -419,23 +431,11 @@ namespace まげつけ_obj変換ツール
                             pos_y_vt.Add(p_number);
 
                         //座標情報を削除
-                        if (p_read == 9)
-                        {
-                            if (three == 1)
-                                vtnumbers[m] = vtnumbers[m].Remove(0, 9);
-
-                            else
-                                vtnumbers[m] = vtnumbers[m].Remove(0, 10);
-                        }
+                        if (three == 1)
+                            vtnumbers[m] = vtnumbers[m].Remove(0, p_read);
 
                         else
-                        {
-                            if (three == 1)
-                                vtnumbers[m] = vtnumbers[m].Remove(0, 8);
-
-                            else
-                                vtnumbers[m] = vtnumbers[m].Remove(0, 9);
-                        }
+                            vtnumbers[m] = vtnumbers[m].Remove(0, p_read + 1);
                     }
 
                     //2回繰り返し
@@ -449,13 +449,24 @@ namespace まげつけ_obj変換ツール
                         if (three == 0)
                             vnnumbers[m] = vnnumbers[m].Remove(0, 3);
 
+                        //小数点の位置を取得
+                        removedec = vnnumbers[m].IndexOf(".");
+
                         //数値がマイナスかどうかを判定する
                         minus = vnnumbers[m].Substring(0, 1);
                         if (minus == "-")
+                        {
                             p_read = 7;
+                            removedec -= 2;
+                            p_read += removedec;
+                        }
 
                         else
+                        {
                             p_read = 6;
+                            removedec -= 1;
+                            p_read += removedec;
+                        }
 
                         //座標を浮動小数点に変換する
                         p_st_number = vnnumbers[m].Substring(0, p_read);
@@ -472,23 +483,11 @@ namespace まげつけ_obj変換ツール
                             pos_y_vn.Add(p_number);
 
                         //座標情報を削除
-                        if (p_read == 7)
-                        {
-                            if (three == 2)
-                                vnnumbers[m] = vnnumbers[m].Remove(0, 7);
-
-                            else
-                                vnnumbers[m] = vnnumbers[m].Remove(0, 8);
-                        }
+                        if (three == 2)
+                            vnnumbers[m] = vnnumbers[m].Remove(0, p_read);
 
                         else
-                        {
-                            if (three == 2)
-                                vnnumbers[m] = vnnumbers[m].Remove(0, 6);
-
-                            else
-                                vnnumbers[m] = vnnumbers[m].Remove(0, 7);
-                        }
+                            vnnumbers[m] = vnnumbers[m].Remove(0, p_read + 1);
                     }
 
                     //3回繰り返し
@@ -505,13 +504,24 @@ namespace まげつけ_obj変換ツール
                             if (three == 0)
                                 mnumber = mnumbers.ElementAt(i).Remove(0, 2);
 
+                            //小数点の位置を取得
+                            removedec = mnumber.IndexOf(".");
+
                             //数値がマイナスかどうかを判定する
                             minus = mnumber.Substring(0, 1);
                             if (minus == "-")
+                            {
                                 p_read = 9;
+                                removedec -= 2;
+                                p_read += removedec;
+                            }
 
                             else
+                            {
                                 p_read = 8;
+                                removedec -= 1;
+                                p_read += removedec;
+                            }
 
                             //座標を浮動小数点に変換する
                             p_st_number = mnumber.Substring(0, p_read);
@@ -528,23 +538,11 @@ namespace まげつけ_obj変換ツール
                                 pos_y_mnumbers.Add(p_number);
 
                             //座標情報を削除
-                            if (p_read == 9)
-                            {
-                                if (three == 2)
-                                    mnumber = mnumber.Remove(0, 9);
-
-                                else
-                                    mnumber = mnumber.Remove(0, 10);
-                            }
+                            if (three == 2)
+                                mnumber = mnumber.Remove(0, p_read);
 
                             else
-                            {
-                                if (three == 2)
-                                    mnumber = mnumber.Remove(0, 8);
-
-                                else
-                                    mnumber = mnumber.Remove(0, 9);
-                            }
+                                mnumber = mnumber.Remove(0, p_read + 1);
                         }
                     }
                 }
@@ -557,13 +555,24 @@ namespace まげつけ_obj変換ツール
                         if (three == 0)
                             rrnumbers = rrnumbers.Remove(0, 2);
 
+                        //小数点の位置を取得
+                        removedec = rrnumbers.IndexOf(".");
+
                         //数値がマイナスかどうかを判定する
                         minus = rrnumbers.Substring(0, 1);
                         if (minus == "-")
+                        {
                             p_read = 9;
+                            removedec -= 2;
+                            p_read += removedec;
+                        }
 
                         else
+                        {
                             p_read = 8;
+                            removedec -= 1;
+                            p_read += removedec;
+                        }
 
                         //座標を浮動小数点に変換する
                         p_st_number = rrnumbers.Substring(0, p_read);
@@ -580,23 +589,11 @@ namespace まげつけ_obj変換ツール
                             pos_y_rrnumbers = p_number;
 
                         //座標情報を削除
-                        if (p_read == 9)
-                        {
-                            if (three == 2)
-                                rrnumbers = "true";
-
-                            else
-                                rrnumbers = rrnumbers.Remove(0, 10);
-                        }
+                        if (three == 2)
+                            rrnumbers = "true";
 
                         else
-                        {
-                            if (three == 2)
-                                rrnumbers = "true";
-
-                            else
-                                rrnumbers = rrnumbers.Remove(0, 9);
-                        }
+                            rrnumbers = rrnumbers.Remove(0, p_read + 1);
                     }
                 }
 
@@ -608,13 +605,24 @@ namespace まげつけ_obj変換ツール
                         if (three == 0)
                             rlnumbers = rlnumbers.Remove(0, 2);
 
+                        //小数点の位置を取得
+                        removedec = rlnumbers.IndexOf(".");
+
                         //数値がマイナスかどうかを判定する
                         minus = rlnumbers.Substring(0, 1);
                         if (minus == "-")
+                        {
                             p_read = 9;
+                            removedec -= 2;
+                            p_read += removedec;
+                        }
 
                         else
+                        {
                             p_read = 8;
+                            removedec -= 1;
+                            p_read += removedec;
+                        }
 
                         //座標を浮動小数点に変換する
                         p_st_number = rlnumbers.Substring(0, p_read);
@@ -631,23 +639,11 @@ namespace まげつけ_obj変換ツール
                             pos_y_rlnumbers = p_number;
 
                         //座標情報を削除
-                        if (p_read == 9)
-                        {
-                            if (three == 2)
-                                rlnumbers = "true";
-
-                            else
-                                rlnumbers = rlnumbers.Remove(0, 10);
-                        }
+                        if (three == 2)
+                            rlnumbers = "true";
 
                         else
-                        {
-                            if (three == 2)
-                                rlnumbers = "true";
-
-                            else
-                                rlnumbers = rlnumbers.Remove(0, 9);
-                        }
+                            rlnumbers = rlnumbers.Remove(0, p_read + 1);
                     }
                 }
 
@@ -659,13 +655,24 @@ namespace まげつけ_obj変換ツール
                         if (three == 0)
                             frnumbers = frnumbers.Remove(0, 2);
 
+                        //小数点の位置を取得
+                        removedec = frnumbers.IndexOf(".");
+
                         //数値がマイナスかどうかを判定する
                         minus = frnumbers.Substring(0, 1);
                         if (minus == "-")
+                        {
                             p_read = 9;
+                            removedec -= 2;
+                            p_read += removedec;
+                        }
 
                         else
+                        {
                             p_read = 8;
+                            removedec -= 1;
+                            p_read += removedec;
+                        }
 
                         //座標を浮動小数点に変換する
                         p_st_number = frnumbers.Substring(0, p_read);
@@ -682,23 +689,11 @@ namespace まげつけ_obj変換ツール
                             pos_y_frnumbers = p_number;
 
                         //座標情報を削除
-                        if (p_read == 9)
-                        {
-                            if (three == 2)
-                                frnumbers = "true";
-
-                            else
-                                frnumbers = frnumbers.Remove(0, 10);
-                        }
+                        if (three == 2)
+                            frnumbers = "true";
 
                         else
-                        {
-                            if (three == 2)
-                                frnumbers = "true";
-
-                            else
-                                frnumbers = frnumbers.Remove(0, 9);
-                        }
+                            frnumbers = frnumbers.Remove(0, p_read + 1);
                     }
                 }
 
@@ -710,13 +705,24 @@ namespace まげつけ_obj変換ツール
                         if (three == 0)
                             flnumbers = flnumbers.Remove(0, 2);
 
+                        //小数点の位置を取得
+                        removedec = flnumbers.IndexOf(".");
+
                         //数値がマイナスかどうかを判定する
                         minus = flnumbers.Substring(0, 1);
                         if (minus == "-")
+                        {
                             p_read = 9;
+                            removedec -= 2;
+                            p_read += removedec;
+                        }
 
                         else
+                        {
                             p_read = 8;
+                            removedec -= 1;
+                            p_read += removedec;
+                        }
 
                         //座標を浮動小数点に変換する
                         p_st_number = flnumbers.Substring(0, p_read);
@@ -733,23 +739,11 @@ namespace まげつけ_obj変換ツール
                             pos_y_flnumbers = p_number;
 
                         //座標情報を削除
-                        if (p_read == 9)
-                        {
-                            if (three == 2)
-                                flnumbers = "true";
-
-                            else
-                                flnumbers = flnumbers.Remove(0, 10);
-                        }
+                        if (three == 2)
+                            flnumbers = "true";
 
                         else
-                        {
-                            if (three == 2)
-                                flnumbers = "true";
-
-                            else
-                                flnumbers = flnumbers.Remove(0, 9);
-                        }
+                            flnumbers = flnumbers.Remove(0, p_read + 1);
                     }
                 }
 
@@ -1293,7 +1287,9 @@ namespace まげつけ_obj変換ツール
                         int triListCountlength = bsxg.IndexOf(triListCount);
                         int verticeslength = bsxg.IndexOf(vertices);
                         verticeslength += 12;
-                        int xgMateriallength = bsxg.IndexOf(xgMaterial);
+                        int xgMateriallength = 0;
+                        if (0 <= bsxg.IndexOf(xgMaterial))
+                            xgMateriallength = bsxg.IndexOf(xgMaterial);
                         int daglength = bsxg.IndexOf(dag);
 
                         fswxg.Write(bsxg, 0, triStripCountlength);
@@ -1832,8 +1828,8 @@ namespace まげつけ_obj変換ツール
                             fswxg.Seek(seek_xg, SeekOrigin.Begin);
                         }
 
-                        fswxg.Write(dag, 0, dag.Length);
-                        seek_xg += dag.Length;
+                        fswxg.Write(dag_node, 0, dag_node.Length);
+                        seek_xg += dag_node.Length;
                         fswxg.Seek(seek_xg, SeekOrigin.Begin);
 
                         for (int k = 0; k < mnumbers.Count(); k++)
