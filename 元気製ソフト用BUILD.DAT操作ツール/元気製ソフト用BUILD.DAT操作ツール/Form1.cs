@@ -61,6 +61,7 @@ namespace 元気製ソフト用BUILD.DAT操作ツール
         {
             BackgroundWorker bgWorker = (BackgroundWorker)sender;
             string[] path = Environment.GetCommandLineArgs();
+
             if (path.Count() != 1)
             {
                 Label1.Text = "実行中...";
@@ -73,19 +74,22 @@ namespace 元気製ソフト用BUILD.DAT操作ツール
                     goto labelfinish;
 
                 string filedir = Path.GetDirectoryName(path[b]);
-                if (File.Exists(filedir + @"\BUILD.TOC") == false)
-                    goto labelerror;
                 string fileextension = Path.GetExtension(path[b]);
                 if (fileextension == ".DAT" || fileextension == ".dat")
+                {
+                    if (File.Exists(filedir + @"\BUILD.TOC") == false)
+                        goto labelerror;
                     goto labelfile;
-                /*
+                }
                 else if (Directory.Exists(path[b]))
+                {
+                    if (File.Exists(filedir + @"\BUILD.TOC") == false)
+                        goto labelerror2;
                     goto labelfolder;
-                */
-                else
-                    goto labelerror;
+                }
+                goto labelerror;
 
-                labelfile:;
+            labelfile:;
 
                 // ドラッグ＆ドロップされたファイル
                 FileStream fsr = new FileStream(path[b], FileMode.Open, FileAccess.Read);
@@ -123,10 +127,68 @@ namespace 元気製ソフト用BUILD.DAT操作ツール
                     writefile_length_seek += 20;
                 }
                 fsr.Close();
+
+            labelfolder:;
+                string[] files = Directory.GetFiles(path[b], "*", SearchOption.AllDirectories);
+                FileStream fsr_toc_lf = new FileStream(filedir + @"\BUILD.TOC", FileMode.Open, FileAccess.Read);
+                byte[] bs_toc_lf = new byte[fsr_toc_lf.Length];
+                fsr_toc_lf.Read(bs_toc_lf, 0, bs_toc_lf.Length);
+                fsr_toc_lf.Close();
+
+                filecount = files.Count();
+                DirectoryInfo di_lf = Directory.CreateDirectory(Path.GetDirectoryName(path[b]) + @"\" + "new");
+                int writefile_totallength = 0;
+
+                byte[] bs_toc_new_lf = new byte[0];
+                byte[] bs_toc_4 = new byte[4];
+                bs_toc_4 = Gethex(filecount);
+                Array.Resize(ref bs_toc_new_lf, 4);
+                Array.Copy(bs_toc_4, 0, bs_toc_new_lf, 0, 4);
+
+                Array.Resize(ref bs_toc_new_lf, bs_toc_new_lf.Length + 12);
+                Array.Copy(bs_toc_lf, 4, bs_toc_new_lf, 4, 12);
+
+                byte[] bs_dat_lf = new byte[0];
+
+                FileStream fsw_new = new FileStream(di_lf + @"\BUILD.DAT", FileMode.Create, FileAccess.Write);
+
+                for (a = 0; a < filecount; a++)
+                {
+                    bgWorker.ReportProgress(a);
+
+                    FileStream fsr_lf = new FileStream(files[a], FileMode.Open, FileAccess.Read);
+
+                    // ファイルの長さ
+                    int writefile_length = (int)fsr_lf.Length;
+
+                    byte[] writefile_file = new byte[writefile_length];
+                    fsr_lf.Read(writefile_file, 0, writefile_file.Length);
+                    fsr_lf.Close();
+                    writefile_length /= 2048;
+
+                    // ファイルを書き出す
+                    fsw_new.Seek(writefile_totallength * 2048, SeekOrigin.Begin);
+                    fsw_new.Write(writefile_file, 0, writefile_file.Length);
+
+                    bs_toc_4 = Gethexint(writefile_totallength);
+                    Array.Resize(ref bs_toc_new_lf, bs_toc_new_lf.Length + 4);
+                    Array.Copy(bs_toc_4, 0, bs_toc_new_lf, 16 + (20 * a), 4);
+                    Array.Resize(ref bs_toc_new_lf, bs_toc_new_lf.Length + 4);
+                    Array.Copy(bs_toc_lf, 20 + (20 * a), bs_toc_new_lf, 20 + (20 * a), 4);
+                    bs_toc_4 = Gethexint(writefile_length);
+                    Array.Resize(ref bs_toc_new_lf, bs_toc_new_lf.Length + 4);
+                    Array.Copy(bs_toc_4, 0, bs_toc_new_lf, 24 + (20 * a), 4);
+                    Array.Resize(ref bs_toc_new_lf, bs_toc_new_lf.Length + 8);
+                    Array.Copy(bs_toc_lf, 28 + (20 * a), bs_toc_new_lf, 28 + (20 * a), 8);
+
+                    writefile_totallength += writefile_length;
+                }
+
+                fsw_new.Close();
+                FileStream fsw_toc_new = new FileStream(di_lf + @"\BUILD.TOC", FileMode.Create, FileAccess.Write);
+                fsw_toc_new.Write(bs_toc_new_lf, 0, bs_toc_new_lf.Length);
+                fsw_toc_new.Close();
                 goto labelfinish;
-
-
-            //labelfolder:;
 
             labelerror:;
                 if (File.Exists(filedir + @"\BUILD.TOC") == false)
@@ -135,7 +197,11 @@ namespace 元気製ソフト用BUILD.DAT操作ツール
                 if (fileextensionf != ".DAT" && fileextensionf != ".dat")
                     MessageBox.Show("このファイルはBUILD.DATではありません");
 
-            labelfinish:;
+            labelerror2:;
+                if (File.Exists(filedir + @"\BUILD.TOC") == false)
+                    MessageBox.Show("フォルダと同じディレクトリに生成元のBUILD.TOCを置いてください");
+
+                labelfinish:;
             }
         }
         
@@ -200,6 +266,44 @@ namespace 元気製ソフト用BUILD.DAT操作ツール
 
         //intをbyte配列4バイト(リトルエンディアン)に変換して戻す
         public static byte[] Gethex(int hex)
+        {
+            string hexstr = hex.ToString("X");
+            if (hexstr.Length == 1 || hexstr.Length == 3 || hexstr.Length == 5 || hexstr.Length == 7)
+                hexstr = "0" + hexstr;
+
+            if (hexstr.Length == 2)
+                hexstr = hexstr + "000000";
+
+            else if (hexstr.Length == 4)
+            {
+                string hexstr1 = hexstr.Substring(0, 2);
+                string hexstr2 = hexstr.Substring(2, 2);
+                hexstr = hexstr2 + hexstr1 + "0000";
+            }
+
+            else if (hexstr.Length == 6)
+            {
+                string hexstr1 = hexstr.Substring(0, 2);
+                string hexstr2 = hexstr.Substring(2, 2);
+                string hexstr3 = hexstr.Substring(4, 2);
+                hexstr = hexstr3 + hexstr2 + hexstr1 + "00";
+            }
+
+            else if (hexstr.Length == 8)
+            {
+                string hexstr1 = hexstr.Substring(0, 2);
+                string hexstr2 = hexstr.Substring(2, 2);
+                string hexstr3 = hexstr.Substring(4, 2);
+                string hexstr4 = hexstr.Substring(6, 2);
+                hexstr = hexstr4 + hexstr3 + hexstr2 + hexstr1;
+            }
+            byte[] hexbyte = new byte[4];
+            hexbyte = StringToBytes(hexstr);
+            return hexbyte;
+        }
+
+        //intをbyte配列4バイト(リトルエンディアン)に変換して戻す
+        public static byte[] Gethexint(int hex)
         {
             string hexstr = hex.ToString("X");
             if (hexstr.Length == 1 || hexstr.Length == 3 || hexstr.Length == 5 || hexstr.Length == 7)
