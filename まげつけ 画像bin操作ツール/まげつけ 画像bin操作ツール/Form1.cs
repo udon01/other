@@ -90,6 +90,7 @@ namespace まげつけ_画像bin操作ツール
 
                 filecount = Getbyteint2(bs, 2);
                 int palettestart = Getbyteint4(bs, 4);
+                int palette256start = palettestart + (Getbyteint4(bs, 16) * 64);
                 int bmpsize_base = 32;
                 int palettesize = 0;
                 int bmpstart = 64;
@@ -108,14 +109,34 @@ namespace まげつけ_画像bin操作ツール
                     int bmpsize_tate_1 = Getbyteint2(bs, bmpsize_base + 10);
                     int bmpsize_yoko_2 = Getbyteint2(bs, bmpsize_base + 12);
                     int bmpsize_tate_2 = Getbyteint2(bs, bmpsize_base + 14);
-                    if (bmpsize_yoko_1 == bmpsize_yoko_2)
+                    if (Getbyteint2(bs, bmpsize_base + 4) == 1)
                         palettesize = 1024;
                     else
                         palettesize = 64;
                     byte[] bswp = new byte[palettesize];
-                    Array.Copy(bs, palettestart, bswp, 0, palettesize);
+                    int palettenum = Getbyteint2(bs, bmpsize_base + 6);
+                    int palettestart_bmp = palettestart + (palettenum * 64);
+                    if (palettesize == 1024)
+                        palettestart_bmp = palette256start + (palettenum * 1024);
+                    Array.Copy(bs, palettestart_bmp, bswp, 0, palettesize);
+                    byte[] bswp_rep = new byte[0];
+                    for (int i = 0; i < palettesize / 4; i++)
+                    {
+                        byte[]palette_rep = new byte[4];
+                        Array.Copy(bswp, i * 4, palette_rep, 0, 4);
+                        Array.Resize(ref bswp_rep, bswp_rep.Length + 1);
+                        Array.Copy(palette_rep, 2, bswp_rep, bswp_rep.Length - 1, 1);
+                        Array.Resize(ref bswp_rep, bswp_rep.Length + 1);
+                        Array.Copy(palette_rep, 1, bswp_rep, bswp_rep.Length - 1, 1);
+                        Array.Resize(ref bswp_rep, bswp_rep.Length + 1);
+                        Array.Copy(palette_rep, 0, bswp_rep, bswp_rep.Length - 1, 1);
+                        Array.Resize(ref bswp_rep, bswp_rep.Length + 1);
+                        Array.Copy(palette_rep, 3, bswp_rep, bswp_rep.Length - 1, 1);
+                    }
 
-                    int bmp_yoko_half = bmpsize_yoko_1 / 2;
+                    int bmp_yoko_half = bmpsize_yoko_1;
+                    if (palettesize == 64)
+                        bmp_yoko_half /= 2;
                     for (int j = 0; j < bswi.Length / bmp_yoko_half; j++)
                     {
                         for (int k = 0; k < bmp_yoko_half; k++)
@@ -242,17 +263,17 @@ namespace まげつけ_画像bin操作ツール
                         Array.Copy(dainyu_none4, 0, bswbmp, bswbmp.Length - 4, 4);
                     }
 
-                    Array.Resize(ref bswbmp, bswbmp.Length + bswp.Length);
-                    Array.Copy(bswp, 0, bswbmp, bswbmp.Length - bswp.Length, bswp.Length);
+                    Array.Resize(ref bswbmp, bswbmp.Length + bswp_rep.Length);
+                    Array.Copy(bswp_rep, 0, bswbmp, bswbmp.Length - bswp_rep.Length, bswp_rep.Length);
                     Array.Resize(ref bswbmp, bswbmp.Length + bswi_rep.Length);
                     Array.Copy(bswi_rep, 0, bswbmp, bswbmp.Length - bswi_rep.Length, bswi_rep.Length);
 
-                    FileStream fsw = new FileStream(di + @"\" + string.Format("{0:0000}", a) + ".bmp", FileMode.Create, FileAccess.Write);
+                    FileStream fsw = new FileStream(di + @"\" + string.Format("{0:0000}", a) + "_p" + palettenum.ToString() + ".bmp", FileMode.Create, FileAccess.Write);
                     fsw.Write(bswbmp, 0, bswbmp.Length);
                     fsw.Close();
 
-                    //透過画像の場合ヘッダーを出力
-                    if (Getbyteint4(bs, bmpsize_base + 16) != 0 || Getbyteint4(bs, bmpsize_base + 28) != 0)
+                    //ヘッダが基本的な構造と違ったら出力する
+                    if (Getbyteint4(bs, bmpsize_base + 16) != 0 || Getbytestr4(bs, bmpsize_base + 20) != "0000803F" || Getbytestr4(bs, bmpsize_base + 24) != "0000803F" || Getbyteint4(bs, bmpsize_base + 28) != 0)
                     {
                         FileStream fswbin = new FileStream(di + @"\" + string.Format("{0:0000}", a) + ".bin", FileMode.Create, FileAccess.Write);
                         byte[] bs_head = new byte[32];
@@ -261,7 +282,6 @@ namespace まげつけ_画像bin操作ツール
                         fswbin.Close();
                     }
 
-                    palettestart += palettesize;
                     bmpsize_base = bmpnext;
                     bmpstart = bmpnext + 32;
                     bmpnext_start = bmpnext;
@@ -288,10 +308,13 @@ namespace まげつけ_画像bin操作ツール
                 string[] files = Directory.GetFiles(path[b], "*.bmp");
                 filecount = files.Count();
                 byte[] bsf = new byte[0];
-                byte[] bspf = new byte[0];
+                byte[] bspf16 = new byte[0];
+                byte[] bspf256 = new byte[0];
                 int filenext_tortal = 0;
                 int palette16count = 0;
+                int palette16count_daburinone = 0;
                 int palette256count = 0;
+                int palette256count_daburinone = 0;
 
                 for (a = 0; a < filecount; a++)
                 {
@@ -302,13 +325,18 @@ namespace まげつけ_画像bin操作ツール
 
                     byte[] bsf_bmp_head = new byte[0];
 
-                    //パレット数ごとにファイルをカウントする
+                    //ファイル名からパレットの番号を取得
+                    string palettenum_f_str = Path.GetFileNameWithoutExtension(files[a]);
+                    palettenum_f_str = palettenum_f_str.Substring(6, palettenum_f_str.Length - 6);
+                    int palettenum_f = int.Parse(palettenum_f_str);
+
+                    //パレット数とパレットの番号を指定
                     int palettesize_f = Getbyteint2(bsrf, 10) - Getbyteint2(bsrf, 14) - 14;
                     if (palettesize_f == 64)
                     {
                         Array.Resize(ref bsf_bmp_head, bsf_bmp_head.Length + 2);
                         Array.Copy(dainyu_none2, 0, bsf_bmp_head, bsf_bmp_head.Length - 2, 2);
-                        bsint2 = Gethex2(palette16count);
+                        bsint2 = Gethex2(palettenum_f);
                         Array.Resize(ref bsf_bmp_head, bsf_bmp_head.Length + 2);
                         Array.Copy(bsint2, 0, bsf_bmp_head, bsf_bmp_head.Length - 2, 2);
                         palette16count += 1;
@@ -317,7 +345,7 @@ namespace まげつけ_画像bin操作ツール
                     {
                         Array.Resize(ref bsf_bmp_head, bsf_bmp_head.Length + 2);
                         Array.Copy(file_palette256, 0, bsf_bmp_head, bsf_bmp_head.Length - 2, 2);
-                        bsint2 = Gethex2(palette256count);
+                        bsint2 = Gethex2(palettenum_f);
                         Array.Resize(ref bsf_bmp_head, bsf_bmp_head.Length + 2);
                         Array.Copy(bsint2, 0, bsf_bmp_head, bsf_bmp_head.Length - 2, 2);
                         palette256count += 1;
@@ -333,9 +361,9 @@ namespace まげつけ_画像bin操作ツール
 
                     //パレットサイズを確認する
                     int bmpsize_yoko_2_f = Getbyteint2(bsrf, 18);
-                    bmpsize_yoko_2_f /= 2;
                     if (palettesize_f == 64)
                     {
+                        bmpsize_yoko_2_f /= 2;
                         bsint2 = Gethex2(bmpsize_yoko_2_f);
                         Array.Resize(ref bsf_bmp_head, bsf_bmp_head.Length + 2);
                         Array.Copy(bsint2, 0, bsf_bmp_head, bsf_bmp_head.Length - 2, 2);
@@ -393,7 +421,7 @@ namespace まげつけ_画像bin操作ツール
                     Array.Resize(ref bsf, bsf.Length + 4);
                     Array.Copy(bsint4, 0, bsf, bsf.Length - 4, 4);
 
-                    //画像のヘッダーが存在する場合コピーする
+                    //画像のヘッダが存在する場合コピーする
                     string bmpheadpath = path[b] + @"\" + string.Format("{0:0000}", a) + ".bin";
                     if (File.Exists(bmpheadpath))
                     {
@@ -403,12 +431,8 @@ namespace まげつけ_画像bin操作ツール
                         fsr_head_f.Close();
                         Array.Resize(ref bsf, bsf.Length + 12);
                         Array.Copy(bsf_bmp_head, 0, bsf, bsf.Length - 12, 12);
-                        Array.Resize(ref bsf, bsf.Length + 4);
-                        Array.Copy(bsr_head_f, 16, bsf, bsf.Length - 4, 4);
-                        Array.Resize(ref bsf, bsf.Length + 8);
-                        Array.Copy(bsf_bmp_head, 16, bsf, bsf.Length - 8, 8);
-                        Array.Resize(ref bsf, bsf.Length + 4);
-                        Array.Copy(bsr_head_f, 28, bsf, bsf.Length - 4, 4);
+                        Array.Resize(ref bsf, bsf.Length + 16);
+                        Array.Copy(bsr_head_f, 16, bsf, bsf.Length - 16, 16);
                         Array.Resize(ref bsf, bsf.Length + bswi_rep_f.Length);
                         Array.Copy(bswi_rep_f, 0, bsf, bsf.Length - bswi_rep_f.Length, bswi_rep_f.Length);
                     }
@@ -420,9 +444,37 @@ namespace まげつけ_画像bin操作ツール
                         Array.Copy(bswi_rep_f, 0, bsf, bsf.Length - bswi_rep_f.Length, bswi_rep_f.Length);
                     }
 
-                    //パレットをコピー
-                    Array.Resize(ref bspf, bspf.Length + palettesize_f);
-                    Array.Copy(bsrf, Getbyteint2(bsrf, 14) + 14, bspf, bspf.Length - palettesize_f, palettesize_f);
+                    //パレットが重複していない場合はGBRに並べ替えてコピー
+                    if ((palettesize_f == 64 && palettenum_f == palette16count_daburinone) || (palettesize_f == 1024 && palettenum_f == palette256count_daburinone))
+                    {
+                        byte[] bsrf_rep_f = new byte[0];
+                        for (int i = 0; i < palettesize_f / 4; i++)
+                        {
+                            byte[] palette_rep = new byte[4];
+                            Array.Copy(bsrf, Getbyteint2(bsrf, 14) + 14 + (i * 4), palette_rep, 0, 4);
+                            Array.Resize(ref bsrf_rep_f, bsrf_rep_f.Length + 1);
+                            Array.Copy(palette_rep, 2, bsrf_rep_f, bsrf_rep_f.Length - 1, 1);
+                            Array.Resize(ref bsrf_rep_f, bsrf_rep_f.Length + 1);
+                            Array.Copy(palette_rep, 1, bsrf_rep_f, bsrf_rep_f.Length - 1, 1);
+                            Array.Resize(ref bsrf_rep_f, bsrf_rep_f.Length + 1);
+                            Array.Copy(palette_rep, 0, bsrf_rep_f, bsrf_rep_f.Length - 1, 1);
+                            Array.Resize(ref bsrf_rep_f, bsrf_rep_f.Length + 1);
+                            Array.Copy(palette_rep, 3, bsrf_rep_f, bsrf_rep_f.Length - 1, 1);
+                        }
+
+                        if (palettesize_f == 64)
+                        {
+                            Array.Resize(ref bspf16, bspf16.Length + palettesize_f);
+                            Array.Copy(bsrf_rep_f, 0, bspf16, bspf16.Length - palettesize_f, palettesize_f);
+                            palette16count_daburinone += 1;
+                        }
+                        else
+                        {
+                            Array.Resize(ref bspf256, bspf256.Length + palettesize_f);
+                            Array.Copy(bsrf_rep_f, 0, bspf256, bspf256.Length - palettesize_f, palettesize_f);
+                            palette256count_daburinone += 1;
+                        }
+                    }
 
                     filenext_tortal += bswi_rep_f.Length + 32;
                     bgWorker.ReportProgress(a);
@@ -439,19 +491,19 @@ namespace まげつけ_画像bin操作ツール
                 Array.Resize(ref bsf_head, bsf_head.Length + 4);
                 Array.Copy(bsint4, 0, bsf_head, bsf_head.Length - 4, 4);
 
-                bsint4 = Gethex4(bsf.Length + 64 + (palette16count * 64));
+                bsint4 = Gethex4(bsf.Length + 64 + (palette16count_daburinone * 64));
                 Array.Resize(ref bsf_head, bsf_head.Length + 4);
                 Array.Copy(bsint4, 0, bsf_head, bsf_head.Length - 4, 4);
 
-                bsint4 = Gethex4(bsf.Length + 64 + bspf.Length);
+                bsint4 = Gethex4(bsf.Length + 64 + bspf16.Length + bspf256.Length);
                 Array.Resize(ref bsf_head, bsf_head.Length + 4);
                 Array.Copy(bsint4, 0, bsf_head, bsf_head.Length - 4, 4);
 
-                bsint4 = Gethex4(palette16count);
+                bsint4 = Gethex4(palette16count_daburinone);
                 Array.Resize(ref bsf_head, bsf_head.Length + 4);
                 Array.Copy(bsint4, 0, bsf_head, bsf_head.Length - 4, 4);
 
-                bsint4 = Gethex4(palette256count);
+                bsint4 = Gethex4(palette256count_daburinone);
                 Array.Resize(ref bsf_head, bsf_head.Length + 4);
                 Array.Copy(bsint4, 0, bsf_head, bsf_head.Length - 4, 4);
 
@@ -477,7 +529,8 @@ namespace まげつけ_画像bin操作ツール
                 {
                     fsw_f.Write(dainyu_none4, 0, 4);
                 }
-                fsw_f.Write(bspf, 0, bspf.Length);
+                fsw_f.Write(bspf16, 0, bspf16.Length);
+                fsw_f.Write(bspf256, 0, bspf256.Length);
 
                 if (File.Exists(unk_path))
                 {
@@ -603,6 +656,28 @@ namespace まげつけ_画像bin操作ツール
             int returnint = Convert.ToInt32(str16, 16);
 
             return returnint;
+        }
+
+        //byte配列4バイトをstringに変換して戻す
+        public static string Getbytestr4(byte[] bytes, int seek)
+        {
+            byte[] byte1 = new byte[1];
+            Array.Copy(bytes, seek, byte1, 0, 1);
+            byte[] byte2 = new byte[1];
+            Array.Copy(bytes, seek + 1, byte2, 0, 1);
+            byte[] byte3 = new byte[1];
+            Array.Copy(bytes, seek + 2, byte3, 0, 1);
+            byte[] byte4 = new byte[1];
+            Array.Copy(bytes, seek + 3, byte4, 0, 1);
+
+            string str1 = BitConverter.ToString(byte1);
+            string str2 = BitConverter.ToString(byte2);
+            string str3 = BitConverter.ToString(byte3);
+            string str4 = BitConverter.ToString(byte4);
+
+            string returnstr = str1 + str2 + str3 + str4;
+
+            return returnstr;
         }
 
         //intをbyte配列2バイト(リトルエンディアン)に変換して戻す
