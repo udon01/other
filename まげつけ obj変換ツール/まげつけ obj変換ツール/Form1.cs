@@ -201,7 +201,8 @@ namespace まげつけ_obj変換ツール
 
                 else if (0 <= v_vt_vn_f.IndexOf("o "))
                 {
-                    if (v_vt_vn_f == "o m1" || v_vt_vn_f == "o m2" || v_vt_vn_f == "o m3")
+                    if (v_vt_vn_f == "o m1" || v_vt_vn_f == "o m2" || v_vt_vn_f == "o m3" || 
+                        0 <= v_vt_vn_f.IndexOf("o m1_s") || 0 <= v_vt_vn_f.IndexOf("o m2_s") || 0 <= v_vt_vn_f.IndexOf("o m3_s"))
                     {
                         v_vt_vn_f = fsr.ReadLine();
                         if (0 <= v_vt_vn_f.IndexOf("v "))
@@ -219,7 +220,7 @@ namespace まげつけ_obj変換ツール
                         }
                     }
 
-                    else if (v_vt_vn_f == "o rr")
+                    else if (v_vt_vn_f == "o rr" || 0 <= v_vt_vn_f.IndexOf("o rr_s"))
                     {
                         v_vt_vn_f = fsr.ReadLine();
                         if (0 <= v_vt_vn_f.IndexOf("v "))
@@ -237,7 +238,7 @@ namespace まげつけ_obj変換ツール
                         }
                     }
 
-                    else if (v_vt_vn_f == "o rl")
+                    else if (v_vt_vn_f == "o rl" || 0 <= v_vt_vn_f.IndexOf("o rl_s"))
                     {
                         v_vt_vn_f = fsr.ReadLine();
                         if (0 <= v_vt_vn_f.IndexOf("v "))
@@ -255,7 +256,7 @@ namespace まげつけ_obj変換ツール
                         }
                     }
 
-                    else if (v_vt_vn_f == "o fr")
+                    else if (v_vt_vn_f == "o fr" || 0 <= v_vt_vn_f.IndexOf("o fr_s"))
                     {
                         v_vt_vn_f = fsr.ReadLine();
                         if (0 <= v_vt_vn_f.IndexOf("v "))
@@ -273,7 +274,7 @@ namespace まげつけ_obj変換ツール
                         }
                     }
 
-                    else if (v_vt_vn_f == "o fl")
+                    else if (v_vt_vn_f == "o fl" || 0 <= v_vt_vn_f.IndexOf("o fl_s"))
                     {
                         v_vt_vn_f = fsr.ReadLine();
                         if (0 <= v_vt_vn_f.IndexOf("v "))
