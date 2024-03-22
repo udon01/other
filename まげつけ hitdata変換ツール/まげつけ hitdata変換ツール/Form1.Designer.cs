@@ -64,7 +64,7 @@
             this.Controls.Add(this.ProgressBar1);
             this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
-            this.Text = "まげつけ hitdata変換ツール";
+            this.Text = "まげつけ hitdata変換ツール v1.1";
             this.Shown += new System.EventHandler(this.Form1_Shown);
             this.ResumeLayout(false);
             this.PerformLayout();

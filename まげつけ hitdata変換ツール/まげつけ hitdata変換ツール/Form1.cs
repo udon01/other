@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using System.ComponentModel;
 using System.Collections;
+using System.Globalization;
 
 namespace まげつけ_hitdata変換ツール
 {
@@ -120,17 +121,16 @@ namespace まげつけ_hitdata変換ツール
                 }
 
                 //頂点座標の変換処理
-                string minus;
                 int p_read;
                 string p_st_number;
                 float p_number;
                 float p_number_x = 0;
                 float p_number_z = 0;
                 float p_number_y = 0;
-                int removedec;
+                int spacedec;
                 List<Vertex> vertexlist = new List<Vertex>();
 
-                for (int m = 0; m < vnumbers.Length; m++)
+                for (int m = 0; m < vnumbers.Count(); m++)
                 {
                     for (int three = 0; three < 3; three++)
                     {
@@ -138,24 +138,13 @@ namespace まげつけ_hitdata変換ツール
                         if (three == 0)
                             vnumbers[m] = vnumbers[m].Remove(0, 2);
 
-                        //小数点の位置を取得
-                        removedec = vnumbers[m].IndexOf(".");
-
-                        //数値がマイナスかどうかを判定する
-                        minus = vnumbers[m].Substring(0, 1);
-                        if (minus == "-")
-                        {
-                            p_read = 9;
-                            removedec -= 2;
-                            p_read += removedec;
-                        }
+                        //空白の位置を取得
+                        spacedec = vnumbers[m].IndexOf(" ");
+                        if (spacedec == -1)
+                            p_read = vnumbers[m].Length;
 
                         else
-                        {
-                            p_read = 8;
-                            removedec -= 1;
-                            p_read += removedec;
-                        }
+                            p_read = spacedec;
 
                         //座標を浮動小数点に変換する
                         p_st_number = vnumbers[m].Substring(0, p_read);
@@ -186,27 +175,41 @@ namespace まげつけ_hitdata変換ツール
 
                 //左フロント_低点
                 bgWorker.ReportProgress(0);
-                List<int> sortlistf1_num = vertexlist.Select(x => x.num).ToList();
-                List<float> sortlistf1_x = vertexlist.Select(x => x.vertex_x).ToList();
-                List<float> sortlistf1_z = vertexlist.Select(x => x.vertex_z).ToList();
-                List<float> sortlistf1_y = vertexlist.Select(x => x.vertex_y).ToList();
+                List<int> sortlistf_num = vertexlist.Select(x => x.num).ToList();
+                List<float> sortlistf_x = vertexlist.Select(x => x.vertex_x).ToList();
+                List<float> sortlistf_z = vertexlist.Select(x => x.vertex_z).ToList();
+                List<float> sortlistf_y = vertexlist.Select(x => x.vertex_y).ToList();
                 List<Vertex> sortlist1 = new List<Vertex>();
                 for (int m = 0; m < 6; m++)
                 {
-                    float sort6_x = sortlistf1_x.OrderBy(n => n).Skip(m).FirstOrDefault();
-                    List<int> sortlisti1 = vertexlist.Where(x => x.vertex_x == sort6_x).Select(x => x.num).ToList();
-                    foreach (int item in sortlisti1)
+                    float sort6_x = sortlistf_x.OrderBy(n => n).Skip(sortlist1.Count()).FirstOrDefault();
+                    List<int> sortlisti = vertexlist.Where(x => x.vertex_x == sort6_x).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
                     {
-                        int sort6_num = sortlistf1_num.Skip(item).FirstOrDefault();
-                        float sort6_z = sortlistf1_z.Skip(item).FirstOrDefault();
-                        float sort6_y = sortlistf1_y.Skip(item).FirstOrDefault();
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        float sort6_y = sortlistf_y.Skip(item).FirstOrDefault();
                         sortlist1.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
                     }
                     if (sortlist1.Count() >= 6)
                         break;
                 }
-                var sort2 = sortlist1.Max(x => x.vertex_y);
-                var sortlist2 = sortlist1.Where(x => x.vertex_y == sort2).ToList();
+                sortlistf_y = sortlist1.Select(x => x.vertex_y).ToList();
+                List<Vertex> sortlist2 = new List<Vertex>();
+                for (int m = 0; m < 2; m++)
+                {
+                    float sort6_y = sortlistf_y.OrderByDescending(n => n).Skip(sortlist2.Count()).FirstOrDefault();
+                    List<int> sortlisti = sortlist1.Where(x => x.vertex_y == sort6_y).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
+                    {
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_x = sortlistf_x.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        sortlist2.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
+                    }
+                    if (sortlist2.Count() >= 2)
+                        break;
+                }
                 var sort3 = sortlist2.Min(x => x.vertex_z);
                 var sortlist3 = sortlist2.Where(x => x.vertex_z == sort3).ToList();
 
@@ -256,8 +259,21 @@ namespace まげつけ_hitdata変換ツール
 
                 //左リア_低点
                 bgWorker.ReportProgress(1);
-                sort2 = sortlist1.Min(x => x.vertex_y);
-                sortlist2 = sortlist1.Where(x => x.vertex_y == sort2).ToList();
+                sortlist2 = new List<Vertex>();
+                for (int m = 0; m < 2; m++)
+                {
+                    float sort6_y = sortlistf_y.OrderBy(n => n).Skip(sortlist2.Count()).FirstOrDefault();
+                    List<int> sortlisti = sortlist1.Where(x => x.vertex_y == sort6_y).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
+                    {
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_x = sortlistf_x.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        sortlist2.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
+                    }
+                    if (sortlist2.Count() >= 2)
+                        break;
+                }
                 sort3 = sortlist2.Min(x => x.vertex_z);
                 sortlist3 = sortlist2.Where(x => x.vertex_z == sort3).ToList();
 
@@ -307,8 +323,21 @@ namespace まげつけ_hitdata変換ツール
 
                 //左リア_上点
                 bgWorker.ReportProgress(2);
-                sort2 = sortlist1.Min(x => x.vertex_y);
-                sortlist2 = sortlist1.Where(x => x.vertex_y == sort2).ToList();
+                sortlist2 = new List<Vertex>();
+                for (int m = 0; m < 2; m++)
+                {
+                    float sort6_y = sortlistf_y.OrderBy(n => n).Skip(sortlist2.Count()).FirstOrDefault();
+                    List<int> sortlisti = sortlist1.Where(x => x.vertex_y == sort6_y).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
+                    {
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_x = sortlistf_x.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        sortlist2.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
+                    }
+                    if (sortlist2.Count() >= 2)
+                        break;
+                }
                 sort3 = sortlist2.Max(x => x.vertex_z);
                 sortlist3 = sortlist2.Where(x => x.vertex_z == sort3).ToList();
 
@@ -458,8 +487,21 @@ namespace まげつけ_hitdata変換ツール
 
                 //左フロント_上点
                 bgWorker.ReportProgress(5);
-                sort2 = sortlist1.Max(x => x.vertex_y);
-                sortlist2 = sortlist1.Where(x => x.vertex_y == sort2).ToList();
+                sortlist2 = new List<Vertex>();
+                for (int m = 0; m < 2; m++)
+                {
+                    float sort6_y = sortlistf_y.OrderByDescending(n => n).Skip(sortlist2.Count()).FirstOrDefault();
+                    List<int> sortlisti = sortlist1.Where(x => x.vertex_y == sort6_y).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
+                    {
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_x = sortlistf_x.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        sortlist2.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
+                    }
+                    if (sortlist2.Count() >= 2)
+                        break;
+                }
                 sort3 = sortlist2.Max(x => x.vertex_z);
                 sortlist3 = sortlist2.Where(x => x.vertex_z == sort3).ToList();
 
@@ -509,27 +551,41 @@ namespace まげつけ_hitdata変換ツール
 
                 //右フロント_低点
                 bgWorker.ReportProgress(6);
-                sortlistf1_num = vertexlist.Select(x => x.num).ToList();
-                sortlistf1_x = vertexlist.Select(x => x.vertex_x).ToList();
-                sortlistf1_z = vertexlist.Select(x => x.vertex_z).ToList();
-                sortlistf1_y = vertexlist.Select(x => x.vertex_y).ToList();
+                sortlistf_num = vertexlist.Select(x => x.num).ToList();
+                sortlistf_x = vertexlist.Select(x => x.vertex_x).ToList();
+                sortlistf_z = vertexlist.Select(x => x.vertex_z).ToList();
+                sortlistf_y = vertexlist.Select(x => x.vertex_y).ToList();
                 sortlist1 = new List<Vertex>();
                 for (int m = 0; m < 6; m++)
                 {
-                    float sort6_x = sortlistf1_x.OrderByDescending(n => n).Skip(m).FirstOrDefault();
-                    List<int> sortlisti1 = vertexlist.Where(x => x.vertex_x == sort6_x).Select(x => x.num).ToList();
-                    foreach (int item in sortlisti1)
+                    float sort6_x = sortlistf_x.OrderByDescending(n => n).Skip(sortlist1.Count()).FirstOrDefault();
+                    List<int> sortlisti = vertexlist.Where(x => x.vertex_x == sort6_x).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
                     {
-                        int sort6_num = sortlistf1_num.Skip(item).FirstOrDefault();
-                        float sort6_z = sortlistf1_z.Skip(item).FirstOrDefault();
-                        float sort6_y = sortlistf1_y.Skip(item).FirstOrDefault();
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        float sort6_y = sortlistf_y.Skip(item).FirstOrDefault();
                         sortlist1.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
                     }
                     if (sortlist1.Count() >= 6)
                         break;
                 }
-                sort2 = sortlist1.Max(x => x.vertex_y);
-                sortlist2 = sortlist1.Where(x => x.vertex_y == sort2).ToList();
+                sortlistf_y = sortlist1.Select(x => x.vertex_y).ToList();
+                sortlist2 = new List<Vertex>();
+                for (int m = 0; m < 2; m++)
+                {
+                    float sort6_y = sortlistf_y.OrderByDescending(n => n).Skip(sortlist2.Count()).FirstOrDefault();
+                    List<int> sortlisti = sortlist1.Where(x => x.vertex_y == sort6_y).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
+                    {
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_x = sortlistf_x.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        sortlist2.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
+                    }
+                    if (sortlist2.Count() >= 2)
+                        break;
+                }
                 sort3 = sortlist2.Min(x => x.vertex_z);
                 sortlist3 = sortlist2.Where(x => x.vertex_z == sort3).ToList();
 
@@ -541,6 +597,7 @@ namespace まげつけ_hitdata変換ツール
                 {
                     dou = floatvertex;
                 }
+
                 dainyu = FloatToString(dou);
                 pos_all.Add(dainyu);
 
@@ -579,8 +636,21 @@ namespace まげつけ_hitdata変換ツール
 
                 //右リア_低点
                 bgWorker.ReportProgress(7);
-                sort2 = sortlist1.Min(x => x.vertex_y);
-                sortlist2 = sortlist1.Where(x => x.vertex_y == sort2).ToList();
+                sortlist2 = new List<Vertex>();
+                for (int m = 0; m < 2; m++)
+                {
+                    float sort6_y = sortlistf_y.OrderBy(n => n).Skip(sortlist2.Count()).FirstOrDefault();
+                    List<int> sortlisti = sortlist1.Where(x => x.vertex_y == sort6_y).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
+                    {
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_x = sortlistf_x.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        sortlist2.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
+                    }
+                    if (sortlist2.Count() >= 2)
+                        break;
+                }
                 sort3 = sortlist2.Min(x => x.vertex_z);
                 sortlist3 = sortlist2.Where(x => x.vertex_z == sort3).ToList();
 
@@ -630,8 +700,21 @@ namespace まげつけ_hitdata変換ツール
 
                 //右リア_上点
                 bgWorker.ReportProgress(8);
-                sort2 = sortlist1.Min(x => x.vertex_y);
-                sortlist2 = sortlist1.Where(x => x.vertex_y == sort2).ToList();
+                sortlist2 = new List<Vertex>();
+                for (int m = 0; m < 2; m++)
+                {
+                    float sort6_y = sortlistf_y.OrderBy(n => n).Skip(sortlist2.Count()).FirstOrDefault();
+                    List<int> sortlisti = sortlist1.Where(x => x.vertex_y == sort6_y).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
+                    {
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_x = sortlistf_x.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        sortlist2.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
+                    }
+                    if (sortlist2.Count() >= 2)
+                        break;
+                }
                 sort3 = sortlist2.Max(x => x.vertex_z);
                 sortlist3 = sortlist2.Where(x => x.vertex_z == sort3).ToList();
 
@@ -781,8 +864,21 @@ namespace まげつけ_hitdata変換ツール
 
                 //右フロント_上点
                 bgWorker.ReportProgress(11);
-                sort2 = sortlist1.Max(x => x.vertex_y);
-                sortlist2 = sortlist1.Where(x => x.vertex_y == sort2).ToList();
+                sortlist2 = new List<Vertex>();
+                for (int m = 0; m < 2; m++)
+                {
+                    float sort6_y = sortlistf_y.OrderByDescending(n => n).Skip(sortlist2.Count()).FirstOrDefault();
+                    List<int> sortlisti = sortlist1.Where(x => x.vertex_y == sort6_y).Select(x => x.num).ToList();
+                    foreach (int item in sortlisti)
+                    {
+                        int sort6_num = sortlistf_num.Skip(item).FirstOrDefault();
+                        float sort6_x = sortlistf_x.Skip(item).FirstOrDefault();
+                        float sort6_z = sortlistf_z.Skip(item).FirstOrDefault();
+                        sortlist2.Add(new Vertex(sort6_num, sort6_x, sort6_z, sort6_y));
+                    }
+                    if (sortlist2.Count() >= 2)
+                        break;
+                }
                 sort3 = sortlist2.Max(x => x.vertex_z);
                 sortlist3 = sortlist2.Where(x => x.vertex_z == sort3).ToList();
 
@@ -852,8 +948,7 @@ namespace まげつけ_hitdata変換ツール
                         string vertexfloat16 = Getbytestr4l(bs, m * 16 + n * 4);
                         uint vertexint = Convert.ToUInt32(vertexfloat16, 16);
                         float vertexfloat = BitConverter.ToSingle(BitConverter.GetBytes(vertexint), 0);
-                        string vertexfloats = vertexfloat.ToString("G8");
-                        //MessageBox.Show(vertexfloats);
+                        string vertexfloats = vertexfloat.ToString("G6");
                         sw.Write(vertexfloats);
                         if (n != 2)
                             sw.Write(" ");
